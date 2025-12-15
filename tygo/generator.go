@@ -30,12 +30,6 @@ func New(config *Config) *Tygo {
 	}
 }
 
-func (g *Tygo) SetTypeMapping(goType string, tsType string) {
-	for _, p := range g.conf.Packages {
-		p.TypeMappings[goType] = tsType
-	}
-}
-
 func (g *Tygo) Generate() error {
 	pkgs, err := packages.Load(&packages.Config{
 		Mode: packages.NeedSyntax | packages.NeedFiles,
@@ -72,7 +66,7 @@ func (g *Tygo) Generate() error {
 			return nil
 		}
 
-		err = os.WriteFile(outPath, []byte(code), 0664)
+		err = os.WriteFile(outPath, []byte(code), 0o664)
 		if err != nil {
 			return nil
 		}

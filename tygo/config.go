@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
-const defaultOutputFilename = "index.ts"
-const defaultFallbackType = "any"
-const defaultPreserveComments = "default"
+const (
+	defaultOutputFilename   = "index.ts"
+	defaultFallbackType     = "any"
+	defaultPreserveComments = "default"
+)
 
 type PackageConfig struct {
 	// The package path just like you would import it in Go
@@ -35,6 +38,9 @@ type PackageConfig struct {
 
 	// Filenames of Go source files that should be included in the Typescript output.
 	IncludeFiles []string `yaml:"include_files"`
+
+	// Regex patterns of Go source files:Struct that should not be included in the Typescript output.
+	IncludePatterns []string `yaml:"include_patterns"`
 
 	// FallbackType defines the Typescript type used as a fallback for unknown Go types.
 	FallbackType string `yaml:"fallback_type"`
@@ -144,6 +150,16 @@ func (c PackageConfig) IsFileIgnored(pathToFile string) bool {
 		return true
 	}
 
+	return false
+}
+
+// IsTypeIncluded checks if the given file and type name matches any of the include patterns using regex.
+func (c PackageConfig) IsTypeIncluded(fileAndTypeName string) bool {
+	for _, include := range c.IncludePatterns {
+		if matched, _ := regexp.Match(include, []byte(fileAndTypeName)); matched {
+			return true
+		}
+	}
 	return false
 }
 

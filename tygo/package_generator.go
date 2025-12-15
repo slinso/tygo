@@ -12,12 +12,20 @@ func (g *PackageGenerator) generateFile(s *strings.Builder, file *ast.File, file
 
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch x := n.(type) {
-
 		// GenDecl can be an import, type, var, or const expression
 		case *ast.GenDecl:
+			t, ok := x.Specs[0].(*ast.TypeSpec)
+			if ok {
+				if len(g.conf.IncludePatterns) > 0 {
+					if !g.conf.IsTypeIncluded(filepath + ":" + t.Name.Name) {
+						return false
+					}
+				}
+			}
 			if x.Tok == token.IMPORT {
 				return false
 			}
+
 			isEmit := false
 			if x.Tok == token.VAR {
 				isEmit = g.isEmitVar(x)

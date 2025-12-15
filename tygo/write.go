@@ -12,10 +12,12 @@ import (
 	"github.com/fatih/structtag"
 )
 
-var validJSNameRegexp = regexp.MustCompile(`(?m)^[\pL_][\pL\pN_]*$`)
-var backquoteEscapeRegexp = regexp.MustCompile(`([$\\])`)
-var octalPrefixRegexp = regexp.MustCompile(`^0[0-7]`)
-var unicode8Regexp = regexp.MustCompile(`\\\\|\\U[\da-fA-F]{8}`)
+var (
+	validJSNameRegexp     = regexp.MustCompile(`(?m)^[\pL_][\pL\pN_]*$`)
+	backquoteEscapeRegexp = regexp.MustCompile(`([$\\])`)
+	octalPrefixRegexp     = regexp.MustCompile(`^0[0-7]`)
+	unicode8Regexp        = regexp.MustCompile(`\\\\|\\U[\da-fA-F]{8}`)
+)
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#table
 var jsNumberOperatorPrecedence = map[token.Token]int{
@@ -64,6 +66,7 @@ func (g *PackageGenerator) writeType(
 	optionalParens bool,
 ) {
 	// log.Println("writeType:", reflect.TypeOf(t), t)
+
 	switch t := t.(type) {
 	case *ast.StarExpr:
 		if optionalParens {
@@ -96,6 +99,18 @@ func (g *PackageGenerator) writeType(
 		// e.g. `time.Time`
 		longType := fmt.Sprintf("%s.%s", t.X, t.Sel)
 		mappedTsType, ok := g.conf.TypeMappings[longType]
+
+		// try to map generic types
+		if !ok {
+			add := ""
+			switch p := p.(type) {
+			case *ast.IndexExpr:
+				add = p.Index.(*ast.Ident).Name
+			}
+			genericType := longType + "[" + add + "]"
+			mappedTsType, ok = g.conf.TypeMappings[genericType]
+		}
+
 		if ok {
 			s.WriteString(mappedTsType)
 		} else { // For unknown types we use the fallback type
@@ -216,9 +231,9 @@ func (g *PackageGenerator) writeType(
 		s.WriteByte('>')
 	case *ast.IndexExpr:
 		g.writeType(s, t.X, t, depth, false)
-		s.WriteByte('<')
-		g.writeType(s, t.Index, t, depth, false)
-		s.WriteByte('>')
+		// s.WriteByte('<')
+		// g.writeType(s, t.Index, t, depth, false)
+		// s.WriteByte('>')
 	default:
 		err := fmt.Errorf("unhandled: %s\n %T", t, t)
 		fmt.Println(err)
